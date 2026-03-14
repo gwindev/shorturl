@@ -1,0 +1,50 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Dashboard</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <nav>
+    <a href="/">Home</a>
+    <a href="/dashboard">Dashboard</a>
+    {% if user.is_admin %}<a href="/admin">Admin</a>{% endif %}
+    <a href="/logout">Logout</a>
+  </nav>
+
+  <h2>สวัสดี {{ user.full_name or user.username }}</h2>
+  <div class="card">
+    <form method="post" action="/dashboard/shorten">
+      <label>URL ต้นทาง</label><br />
+      <input name="original_url" type="url" style="min-width:420px" placeholder="https://example.com/very/long/url" required />
+      <button type="submit">ย่อ URL</button>
+    </form>
+  </div>
+
+  {% if qr %}
+  <div class="card">
+    <h3>ลิงก์ล่าสุด</h3>
+    <p><a href="{{ latest_short_link }}" target="_blank">{{ latest_short_link }}</a></p>
+    <img src="{{ qr }}" alt="QR Code" />
+  </div>
+  {% endif %}
+
+  <div class="card">
+    <h3>ลิงก์ของฉัน</h3>
+    <table>
+      <thead><tr><th>ID</th><th>Original URL</th><th>Short URL</th><th>Created</th></tr></thead>
+      <tbody>
+        {% for item in urls %}
+        <tr>
+          <td>{{ item.id }}</td>
+          <td>{{ item.original_url }}</td>
+          <td><a href="{{ base_url }}/s/{{ item.short_code }}" target="_blank">{{ base_url }}/s/{{ item.short_code }}</a></td>
+          <td>{{ item.created_at }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</body>
+</html>
