@@ -33,7 +33,7 @@ uvicorn app.main:app --reload
 2. ระบบสร้าง Short URL และแสดง QR Code ทันที
 3. Redirect ผ่าน `/s/{short_code}`
 4. Admin ดูข้อมูลผู้ใช้และ URL ทั้งหมด
-5. API สำหรับออก JWT Token, สร้าง short URL และดูรายการ URL ของตัวเอง
+5. API สำหรับออก JWT Token, ตรวจข้อมูลผู้ใช้จาก token, สร้าง short URL และดูรายการ URL ของตัวเอง
 
 ## ตัวอย่าง API
 ### ขอ token
@@ -47,6 +47,20 @@ curl -X POST http://localhost:8000/api/auth/token \
 curl -X POST http://localhost:8000/api/shorten \
   -H "Authorization: Bearer <TOKEN>" \
   -d 'original_url=https://www.example.com'
+```
+
+### สร้าง short URL ด้วย JSON (ใช้ bearer token)
+```bash
+curl -X POST http://localhost:8000/api/shorten-json \
+  -H "Authorization: Bearer <TOKEN>" \
+  -H "Content-Type: application/json" \
+  -d '{"original_url":"https://www.example.com"}'
+```
+
+### ตรวจสอบ JWT ว่าใช้ได้ไหม
+```bash
+curl http://localhost:8000/api/auth/me \
+  -H "Authorization: Bearer <TOKEN>"
 ```
 
 ### ดู URL ของตัวเอง

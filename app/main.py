@@ -7,13 +7,14 @@ from datetime import datetime, timedelta
 from typing import Generator, Optional
 
 import qrcode
-from fastapi import Depends, FastAPI, Form, HTTPException, Request, status
+from fastapi import Body, Depends, FastAPI, Form, HTTPException, Request, status
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from jose import JWTError, jwt
 from passlib.context import CryptContext
+from pydantic import BaseModel, HttpUrl
 from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, create_engine, select
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, relationship, sessionmaker
 
@@ -54,6 +55,10 @@ class ShortURL(Base):
     owner_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
 
     owner: Mapped[User] = relationship(back_populates="urls")
+
+
+class ShortenRequest(BaseModel):
+    original_url: HttpUrl
 
 
 def get_db() -> Generator[Session, None, None]:
@@ -242,6 +247,16 @@ def login_api(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = De
     return {"access_token": access_token, "token_type": "bearer"}
 
 
+@app.get("/api/auth/me")
+def me_api(current_user: User = Depends(get_current_api_user)):
+    return {
+        "id": current_user.id,
+        "username": current_user.username,
+        "full_name": current_user.full_name,
+        "is_admin": current_user.is_admin,
+    }
+
+
 @app.post("/api/shorten")
 def shorten_api(original_url: str = Form(...), current_user: User = Depends(get_current_api_user), db: Session = Depends(get_db)):
     code = create_short_code(db)
@@ -250,6 +265,21 @@ def shorten_api(original_url: str = Form(...), current_user: User = Depends(get_
     db.commit()
     short_link = f"{BASE_URL}/s/{code}"
     return JSONResponse({"original_url": original_url, "short_code": code, "short_url": short_link, "qr_data_uri": make_qr_data_uri(short_link)})
+
+
+@app.post("/api/shorten-json")
+def shorten_api_json(payload: ShortenRequest = Body(...), current_user: User = Depends(get_current_api_user), db: Session = Depends(get_db)):
+    code = create_short_code(db)
+    new_url = ShortURL(original_url=str(payload.original_url), short_code=code, owner_id=current_user.id)
+    db.add(new_url)
+    db.commit()
+    short_link = f"{BASE_URL}/s/{code}"
+    return {
+        "original_url": str(payload.original_url),
+        "short_code": code,
+        "short_url": short_link,
+        "qr_data_uri": make_qr_data_uri(short_link),
+    }
 
 
 @app.get("/api/my-urls")
