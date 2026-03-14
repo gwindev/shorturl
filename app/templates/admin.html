@@ -1,0 +1,41 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Admin</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <nav>
+    <a href="/">Home</a>
+    <a href="/dashboard">Dashboard</a>
+    <a href="/admin">Admin</a>
+    <a href="/logout">Logout</a>
+  </nav>
+
+  <h2>Admin Panel</h2>
+  <div class="card">
+    <h3>Users</h3>
+    <table>
+      <thead><tr><th>ID</th><th>Username</th><th>Name</th><th>Admin</th></tr></thead>
+      <tbody>
+      {% for u in users %}
+      <tr><td>{{ u.id }}</td><td>{{ u.username }}</td><td>{{ u.full_name }}</td><td>{{ u.is_admin }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h3>All Short URLs</h3>
+    <table>
+      <thead><tr><th>ID</th><th>Code</th><th>Original URL</th><th>Owner ID</th><th>Created</th></tr></thead>
+      <tbody>
+      {% for item in urls %}
+      <tr><td>{{ item.id }}</td><td>{{ item.short_code }}</td><td>{{ item.original_url }}</td><td>{{ item.owner_id }}</td><td>{{ item.created_at }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</body>
+</html>
