@@ -18,7 +18,7 @@ from pydantic import BaseModel, HttpUrl
 from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, create_engine, select
 from sqlalchemy.orm import DeclarativeBase, Mapped, Session, mapped_column, relationship, sessionmaker
 
-SECRET_KEY = "change-this-in-production"
+SECRET_KEY = "33e7bfde4f9106a0a2a2b037aab6777ae4753e7daac97800d2b62577c9c6a0a2"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60
 BASE_URL = "http://localhost:8000"
@@ -27,6 +27,10 @@ engine = create_engine("sqlite:///./shorturl.db", connect_args={"check_same_thre
 SessionLocal = sessionmaker(bind=engine, autocommit=False, autoflush=False)
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/token")
+
+
+def build_short_link(code: str) -> str:
+    return f"{BASE_URL}/{code}"
 
 
 class Base(DeclarativeBase):
@@ -55,6 +59,20 @@ class ShortURL(Base):
     owner_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
 
     owner: Mapped[User] = relationship(back_populates="urls")
+    clicks: Mapped[list["Click"]] = relationship(back_populates="short_url", cascade="all, delete-orphan")
+
+
+class Click(Base):
+    __tablename__ = "clicks"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    short_url_id: Mapped[int] = mapped_column(ForeignKey("short_urls.id"))
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    ip: Mapped[str] = mapped_column(String(48))
+    user_agent: Mapped[Optional[str]] = mapped_column(String(512), nullable=True)
+    country: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
+
+    short_url: Mapped[ShortURL] = relationship(back_populates="clicks")
 
 
 class ShortenRequest(BaseModel):
@@ -173,14 +191,17 @@ def home(request: Request, db: Session = Depends(get_db)):
 
 @app.get("/login", response_class=HTMLResponse)
 def login_page(request: Request):
-    return templates.TemplateResponse("login.html", {"request": request, "error": None})
+    return templates.TemplateResponse("login.html", {"request": request, "error": None, "user": None})
 
 
 @app.post("/login", response_class=HTMLResponse)
 def login(request: Request, username: str = Form(...), password: str = Form(...), db: Session = Depends(get_db)):
     user = authenticate_user(db, username, password)
     if not user:
-        return templates.TemplateResponse("login.html", {"request": request, "error": "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง"})
+        return templates.TemplateResponse(
+            "login.html",
+            {"request": request, "error": "ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง", "user": None},
+        )
 
     token = create_access_token({"sub": user.username}, timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
     response = RedirectResponse(url="/dashboard", status_code=status.HTTP_303_SEE_OTHER)
@@ -205,6 +226,33 @@ def dashboard(request: Request, db: Session = Depends(get_db)):
     return templates.TemplateResponse("dashboard.html", {"request": request, "user": user, "urls": urls, "base_url": BASE_URL, "qr": None})
 
 
+def get_short_url(db: Session, url_id: int) -> Optional[ShortURL]:
+    return db.scalar(select(ShortURL).where(ShortURL.id == url_id))
+
+
+def detect_device_type(user_agent: Optional[str]) -> str:
+    if not user_agent:
+        return "desktop"
+    ua = user_agent.lower()
+    mobile_keywords = ["mobile", "iphone", "ipad", "android", "blackberry", "phone", "tablet"]
+    for kw in mobile_keywords:
+        if kw in ua:
+            return "mobile"
+    return "desktop"
+
+
+def record_click(db: Session, url: ShortURL, request: Request) -> None:
+    country = request.headers.get("CF-IPCountry") or request.headers.get("X-Country")
+    click = Click(
+        short_url_id=url.id,
+        ip=(request.client.host if request.client else ""),
+        user_agent=request.headers.get("User-Agent"),
+        country=country,
+    )
+    db.add(click)
+    db.commit()
+
+
 @app.post("/dashboard/shorten", response_class=HTMLResponse)
 def shorten_from_web(request: Request, original_url: str = Form(...), db: Session = Depends(get_db)):
     user = get_web_user(request, db)
@@ -217,12 +265,116 @@ def shorten_from_web(request: Request, original_url: str = Form(...), db: Sessio
     db.commit()
 
     urls = db.scalars(select(ShortURL).where(ShortURL.owner_id == user.id).order_by(ShortURL.id.desc())).all()
-    short_link = f"{BASE_URL}/s/{code}"
+    short_link = build_short_link(code)
     qr = make_qr_data_uri(short_link)
     return templates.TemplateResponse(
         "dashboard.html",
         {"request": request, "user": user, "urls": urls, "base_url": BASE_URL, "qr": qr, "latest_short_link": short_link},
     )
+
+
+@app.get("/dashboard/url/{url_id}/edit", response_class=HTMLResponse)
+def edit_url_page(url_id: int, request: Request, db: Session = Depends(get_db)):
+    user = get_web_user(request, db)
+    if not user:
+        return RedirectResponse("/login", status_code=status.HTTP_303_SEE_OTHER)
+
+    record = get_short_url(db, url_id)
+    if not record or record.owner_id != user.id:
+        return HTMLResponse("<h3>404 ไม่พบลิงก์ที่ต้องการ</h3>", status_code=404)
+
+    return templates.TemplateResponse(
+        "dashboard.html",
+        {
+            "request": request,
+            "user": user,
+            "urls": db.scalars(select(ShortURL).where(ShortURL.owner_id == user.id).order_by(ShortURL.id.desc())).all(),
+            "base_url": BASE_URL,
+            "edit_url": record,
+        },
+    )
+
+
+@app.get("/dashboard/url/{url_id}/stats")
+def url_stats(
+    url_id: int,
+    ip: Optional[str] = None,
+    country: Optional[str] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    db: Session = Depends(get_db),
+):
+    record = get_short_url(db, url_id)
+    if not record:
+        raise HTTPException(status_code=404, detail="URL not found")
+
+    query = select(Click).where(Click.short_url_id == url_id)
+    if ip:
+        query = query.where(Click.ip.contains(ip))
+    if country:
+        query = query.where(Click.country == country)
+    if start_date:
+        try:
+            start_dt = datetime.fromisoformat(start_date)
+            query = query.where(Click.created_at >= start_dt)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid start_date")
+    if end_date:
+        try:
+            end_dt = datetime.fromisoformat(end_date)
+            query = query.where(Click.created_at <= end_dt)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid end_date")
+
+    clicks = db.scalars(query.order_by(Click.created_at)).all()
+
+    stats: dict[str, dict[str, int]] = {}
+    for click in clicks:
+        day = click.created_at.date().isoformat()
+        device = detect_device_type(click.user_agent)
+        stats.setdefault(day, {"mobile": 0, "desktop": 0})
+        stats[day][device] += 1
+
+    labels = sorted(stats.keys())
+    mobile = [stats[d]["mobile"] for d in labels]
+    desktop = [stats[d]["desktop"] for d in labels]
+
+    return {
+        "labels": labels,
+        "mobile": mobile,
+        "desktop": desktop,
+        "total_clicks": len(clicks),
+    }
+
+
+@app.post("/dashboard/url/{url_id}/edit", response_class=HTMLResponse)
+def edit_url(url_id: int, request: Request, original_url: str = Form(...), db: Session = Depends(get_db)):
+    user = get_web_user(request, db)
+    if not user:
+        return RedirectResponse("/login", status_code=status.HTTP_303_SEE_OTHER)
+
+    record = get_short_url(db, url_id)
+    if not record or record.owner_id != user.id:
+        return HTMLResponse("<h3>404 ไม่พบลิงก์ที่ต้องการ</h3>", status_code=404)
+
+    record.original_url = original_url
+    db.commit()
+
+    return RedirectResponse("/dashboard", status_code=status.HTTP_303_SEE_OTHER)
+
+
+@app.post("/dashboard/url/{url_id}/delete", response_class=HTMLResponse)
+def delete_url(url_id: int, request: Request, db: Session = Depends(get_db)):
+    user = get_web_user(request, db)
+    if not user:
+        return RedirectResponse("/login", status_code=status.HTTP_303_SEE_OTHER)
+
+    record = get_short_url(db, url_id)
+    if record and record.owner_id == user.id:
+        db.delete(record)
+        db.commit()
+
+    return RedirectResponse("/dashboard", status_code=status.HTTP_303_SEE_OTHER)
 
 
 @app.get("/admin", response_class=HTMLResponse)
@@ -263,7 +415,7 @@ def shorten_api(original_url: str = Form(...), current_user: User = Depends(get_
     new_url = ShortURL(original_url=original_url, short_code=code, owner_id=current_user.id)
     db.add(new_url)
     db.commit()
-    short_link = f"{BASE_URL}/s/{code}"
+    short_link = build_short_link(code)
     return JSONResponse({"original_url": original_url, "short_code": code, "short_url": short_link, "qr_data_uri": make_qr_data_uri(short_link)})
 
 
@@ -273,7 +425,7 @@ def shorten_api_json(payload: ShortenRequest = Body(...), current_user: User = D
     new_url = ShortURL(original_url=str(payload.original_url), short_code=code, owner_id=current_user.id)
     db.add(new_url)
     db.commit()
-    short_link = f"{BASE_URL}/s/{code}"
+    short_link = build_short_link(code)
     return {
         "original_url": str(payload.original_url),
         "short_code": code,
@@ -290,7 +442,7 @@ def my_urls_api(current_user: User = Depends(get_current_api_user), db: Session 
             "id": item.id,
             "original_url": item.original_url,
             "short_code": item.short_code,
-            "short_url": f"{BASE_URL}/s/{item.short_code}",
+            "short_url": build_short_link(item.short_code),
             "created_at": item.created_at.isoformat(),
         }
         for item in urls
@@ -298,8 +450,20 @@ def my_urls_api(current_user: User = Depends(get_current_api_user), db: Session 
 
 
 @app.get("/s/{short_code}")
-def redirect_short_url(short_code: str, db: Session = Depends(get_db)):
+def redirect_short_url(short_code: str, request: Request, db: Session = Depends(get_db)):
     record = db.scalar(select(ShortURL).where(ShortURL.short_code == short_code))
     if not record:
         return HTMLResponse("<h3>404 ไม่พบลิงก์ที่ต้องการ</h3>", status_code=404)
+
+    record_click(db, record, request)
+    return RedirectResponse(record.original_url, status_code=status.HTTP_307_TEMPORARY_REDIRECT)
+
+
+@app.get("/{short_code}")
+def redirect_short_url_root(short_code: str, request: Request, db: Session = Depends(get_db)):
+    record = db.scalar(select(ShortURL).where(ShortURL.short_code == short_code))
+    if not record:
+        return HTMLResponse("<h3>404 ไม่พบลิงก์ที่ต้องการ</h3>", status_code=404)
+
+    record_click(db, record, request)
     return RedirectResponse(record.original_url, status_code=status.HTTP_307_TEMPORARY_REDIRECT)

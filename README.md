@@ -14,13 +14,29 @@
 - JWT (python-jose)
 - QR Code (qrcode)
 
-## เริ่มต้นใช้งาน
-```bash
-python -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-uvicorn app.main:app --reload
-```
+# สำหรับ macOS / Linux
+## 1. สร้าง Virtual Environment
+`python3 -m venv venv`
+## 2. Activate Virtual Environment
+`source venv/bin/activate`
+## 3. ติดตั้ง Dependencies (แนะนำให้อัปเดต pip ก่อน)
+`python -m pip install --upgrade pip`\
+`python -m pip install -r requirements.txt`
+## 4. เริ่มต้นใช้งาน Server
+`uvicorn app.main:app --reload`
+
+# สำหรับ Windows
+## 1. สร้าง Virtual Environment
+`python -m venv venv`
+# 2. Activate Virtual Environment
+### สำหรับ PowerShell:
+`.\venv\Scripts\Activate.ps1`
+### สำหรับ Command Prompt (cmd):
+`.\venv\Scripts\activate`
+## 3. ติดตั้ง Dependencies
+`pip install -r requirements.txt`
+## 4. เริ่มต้นใช้งาน Server
+`uvicorn app.main:app --reload`
 
 เข้าใช้งานที่: http://localhost:8000
 
@@ -31,7 +47,7 @@ uvicorn app.main:app --reload
 ## ฟีเจอร์
 1. ผู้ใช้ล็อกอินและย่อ URL ผ่านหน้า Dashboard
 2. ระบบสร้าง Short URL และแสดง QR Code ทันที
-3. Redirect ผ่าน `/s/{short_code}`
+3. Redirect ผ่าน `/{short_code}` (และยังรองรับ `/s/{short_code}` ด้วย)
 4. Admin ดูข้อมูลผู้ใช้และ URL ทั้งหมด
 5. API สำหรับออก JWT Token, ตรวจข้อมูลผู้ใช้จาก token, สร้าง short URL และดูรายการ URL ของตัวเอง
 

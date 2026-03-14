@@ -1,50 +1,188 @@
-<!doctype html>
-<html>
-<head>
-  <meta charset="utf-8" />
-  <title>Dashboard</title>
-  <link rel="stylesheet" href="/static/style.css" />
-</head>
-<body>
-  <nav>
-    <a href="/">Home</a>
-    <a href="/dashboard">Dashboard</a>
-    {% if user.is_admin %}<a href="/admin">Admin</a>{% endif %}
-    <a href="/logout">Logout</a>
-  </nav>
+{% extends "base.html" %}
 
+{% block title %}Dashboard — ShortQR{% endblock %}
+
+{% block content %}
+<section class="page-header">
   <h2>สวัสดี {{ user.full_name or user.username }}</h2>
-  <div class="card">
-    <form method="post" action="/dashboard/shorten">
-      <label>URL ต้นทาง</label><br />
-      <input name="original_url" type="url" style="min-width:420px" placeholder="https://example.com/very/long/url" required />
-      <button type="submit">ย่อ URL</button>
-    </form>
-  </div>
+  <p class="lead">สร้างลิงก์สั้นและแชร์ได้ทันที พร้อม QR Code สำหรับสแกน</p>
+</section>
 
-  {% if qr %}
-  <div class="card">
-    <h3>ลิงก์ล่าสุด</h3>
-    <p><a href="{{ latest_short_link }}" target="_blank">{{ latest_short_link }}</a></p>
+<section class="card">
+  <form method="post" action="/dashboard/shorten" class="form-inline">
+    <label class="sr-only" for="original_url">URL ต้นทาง</label>
+    <input id="original_url" name="original_url" type="url" placeholder="https://example.com/very/long/url" required />
+    <button type="submit" class="btn btn-primary">ย่อ URL</button>
+  </form>
+</section>
+
+{% if qr %}
+<section class="card">
+  <h3>ลิงก์ล่าสุด</h3>
+  <p><a href="{{ latest_short_link }}" target="_blank">{{ latest_short_link }}</a></p>
+  <div class="qr">
     <img src="{{ qr }}" alt="QR Code" />
   </div>
-  {% endif %}
+</section>
+{% endif %}
 
-  <div class="card">
-    <h3>ลิงก์ของฉัน</h3>
+<section class="card">
+  <h3>ลิงก์ของฉัน</h3>
+  <div class="table-wrap">
     <table>
-      <thead><tr><th>ID</th><th>Original URL</th><th>Short URL</th><th>Created</th></tr></thead>
+      <thead><tr><th>ID</th><th>Original URL</th><th>Short URL</th><th>Clicks</th><th>Created</th><th>Actions</th></tr></thead>
       <tbody>
         {% for item in urls %}
         <tr>
           <td>{{ item.id }}</td>
-          <td>{{ item.original_url }}</td>
-          <td><a href="{{ base_url }}/s/{{ item.short_code }}" target="_blank">{{ base_url }}/s/{{ item.short_code }}</a></td>
+          <td class="break">{{ item.original_url }}</td>
+          <td class="break"><a href="{{ base_url }}/{{ item.short_code }}" target="_blank">{{ base_url }}/{{ item.short_code }}</a></td>
+          <td>{{ item.clicks|length }}</td>
           <td>{{ item.created_at }}</td>
+          <td class="actions">
+            <a href="/dashboard/url/{{ item.id }}/edit" class="btn btn-ghost">Edit</a>
+            <form method="post" action="/dashboard/url/{{ item.id }}/delete" onsubmit="return confirm('ยืนยันการลบลิงก์นี้?');" style="display:inline;">
+              <button type="submit" class="btn btn-ghost">Delete</button>
+            </form>
+          </td>
         </tr>
         {% endfor %}
       </tbody>
     </table>
   </div>
-</body>
-</html>
+</section>
+
+{% if edit_url %}
+<section class="card">
+  <h3>แก้ไขลิงก์</h3>
+  <form method="post" action="/dashboard/url/{{ edit_url.id }}/edit" class="form-inline">
+    <label class="sr-only" for="original_url_edit">Original URL</label>
+    <input id="original_url_edit" name="original_url" type="url" value="{{ edit_url.original_url }}" required />
+    <button type="submit" class="btn btn-primary">บันทึก</button>
+    <a href="/dashboard" class="btn btn-ghost">ยกเลิก</a>
+  </form>
+
+  <div class="stats">
+    <div class="stats-row">
+      <div>
+        <h4>คลิกทั้งหมด</h4>
+        <p id="total-clicks" class="stat-number">–</p>
+      </div>
+      <div>
+        <h4>กรอง</h4>
+        <form id="stats-filter" class="stats-filter">
+          <label>
+            IP
+            <input name="ip" placeholder="ใส่ IP" />
+          </label>
+          <label>
+            ประเทศ
+            <input name="country" placeholder="ตัวอย่าง TH" />
+          </label>
+          <label>
+            จาก
+            <input name="start_date" type="date" />
+          </label>
+          <label>
+            ถึง
+            <input name="end_date" type="date" />
+          </label>
+          <button type="submit" class="btn btn-primary">กรอง</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="chart-card">
+      <canvas id="clickChart" width="400" height="180"></canvas>
+    </div>
+  </div>
+</section>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  const ctx = document.getElementById('clickChart');
+  let clickChart;
+
+  function renderChart(data) {
+    const config = {
+      type: 'line',
+      data: {
+        labels: data.labels,
+        datasets: [
+          {
+            label: 'Mobile',
+            data: data.mobile,
+            borderColor: 'rgba(79, 70, 229, 0.85)',
+            backgroundColor: 'rgba(79, 70, 229, 0.2)',
+            tension: 0.3,
+          },
+          {
+            label: 'Desktop',
+            data: data.desktop,
+            borderColor: 'rgba(37, 99, 235, 0.85)',
+            backgroundColor: 'rgba(37, 99, 235, 0.2)',
+            tension: 0.3,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: {
+            position: 'top',
+            labels: { color: '#eef2ff' },
+          },
+        },
+        scales: {
+          x: {
+            ticks: { color: '#cbd5e1' },
+            grid: { color: 'rgba(255,255,255,0.08)' },
+          },
+          y: {
+            beginAtZero: true,
+            ticks: { color: '#cbd5e1' },
+            grid: { color: 'rgba(255,255,255,0.08)' },
+          },
+        },
+      },
+    };
+
+    if (clickChart) {
+      clickChart.data = config.data;
+      clickChart.options = config.options;
+      clickChart.update();
+    } else {
+      clickChart = new Chart(ctx, config);
+    }
+  }
+
+  async function loadStats(params = {}) {
+    const url = new URL(window.location.origin + '/dashboard/url/{{ edit_url.id }}/stats');
+    Object.keys(params).forEach((key) => {
+      if (params[key]) url.searchParams.append(key, params[key]);
+    });
+
+    const res = await fetch(url);
+    if (!res.ok) return;
+
+    const data = await res.json();
+    document.getElementById('total-clicks').textContent = data.total_clicks;
+    renderChart(data);
+  }
+
+  document.getElementById('stats-filter').addEventListener('submit', (event) => {
+    event.preventDefault();
+    const form = event.target;
+    const params = {
+      ip: form.ip.value.trim(),
+      country: form.country.value.trim(),
+      start_date: form.start_date.value,
+      end_date: form.end_date.value,
+    };
+    loadStats(params);
+  });
+
+  loadStats();
+</script>
+{% endif %}
+{% endblock %}

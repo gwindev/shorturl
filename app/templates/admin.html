@@ -1,21 +1,16 @@
-<!doctype html>
-<html>
-<head>
-  <meta charset="utf-8" />
-  <title>Admin</title>
-  <link rel="stylesheet" href="/static/style.css" />
-</head>
-<body>
-  <nav>
-    <a href="/">Home</a>
-    <a href="/dashboard">Dashboard</a>
-    <a href="/admin">Admin</a>
-    <a href="/logout">Logout</a>
-  </nav>
+{% extends "base.html" %}
 
+{% block title %}Admin — ShortQR{% endblock %}
+
+{% block content %}
+<section class="page-header">
   <h2>Admin Panel</h2>
-  <div class="card">
-    <h3>Users</h3>
+  <p class="lead">ดูข้อมูลผู้ใช้และลิงก์ทั้งหมดของระบบ</p>
+</section>
+
+<section class="card">
+  <h3>Users</h3>
+  <div class="table-wrap">
     <table>
       <thead><tr><th>ID</th><th>Username</th><th>Name</th><th>Admin</th></tr></thead>
       <tbody>
@@ -25,17 +20,19 @@
       </tbody>
     </table>
   </div>
+</section>
 
-  <div class="card">
-    <h3>All Short URLs</h3>
+<section class="card">
+  <h3>All Short URLs</h3>
+  <div class="table-wrap">
     <table>
       <thead><tr><th>ID</th><th>Code</th><th>Original URL</th><th>Owner ID</th><th>Created</th></tr></thead>
       <tbody>
       {% for item in urls %}
-      <tr><td>{{ item.id }}</td><td>{{ item.short_code }}</td><td>{{ item.original_url }}</td><td>{{ item.owner_id }}</td><td>{{ item.created_at }}</td></tr>
+      <tr><td>{{ item.id }}</td><td>{{ item.short_code }}</td><td class="break">{{ item.original_url }}</td><td>{{ item.owner_id }}</td><td>{{ item.created_at }}</td></tr>
       {% endfor %}
       </tbody>
     </table>
   </div>
-</body>
-</html>
+</section>
+{% endblock %}

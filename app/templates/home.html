@@ -1,32 +1,26 @@
-<!doctype html>
-<html>
-<head>
-  <meta charset="utf-8" />
-  <title>Short URL + QR</title>
-  <link rel="stylesheet" href="/static/style.css" />
-</head>
-<body>
-  <nav>
-    <a href="/">Home</a>
-    {% if user %}
-      <a href="/dashboard">Dashboard</a>
-      {% if user.is_admin %}<a href="/admin">Admin</a>{% endif %}
-      <a href="/logout">Logout</a>
-    {% else %}
-      <a href="/login">Login</a>
-    {% endif %}
-  </nav>
+{% extends "base.html" %}
 
-  <h1>ระบบย่อ URL ให้สั้นลง + QR Code</h1>
-  <div class="card">
-    <p>Mini Project วิชา IT375 (กลุ่ม 881) - ตัวอย่างระบบพร้อมใช้งาน</p>
-    <ul>
-      <li>มี Authentication (Login/Logout + JWT สำหรับ API)</li>
-      <li>มี API สำหรับสร้างลิงก์สั้นและดูรายการลิงก์</li>
-      <li>มี Admin จัดการข้อมูลผู้ใช้และลิงก์ทั้งหมด</li>
-      <li>มี Frontend ให้ผู้ใช้สร้างลิงก์และ QR Code</li>
-    </ul>
-    <p class="small">บัญชีเริ่มต้น: admin/admin123 หรือ student/student123</p>
+{% block title %}Home — ShortQR{% endblock %}
+
+{% block content %}
+<section class="hero">
+  <h1>ย่อ URL ให้สั้นขึ้น พร้อม QR Code</h1>
+  <p class="lead">สร้างลิงก์สั้นพร้อมสแกนด้วย QR Code ได้ทันที — เหมาะสำหรับแชร์บน Social หรืองานนำเสนอ</p>
+
+  <div class="card grid-2">
+    <div>
+      <h2>ฟีเจอร์เด่น</h2>
+      <ul>
+        <li>Login/Logout + JWT สำหรับ API</li>
+        <li>สร้าง & จัดการ Short URL พร้อม QR Code</li>
+        <li>Admin panel ดูข้อมูลผู้ใช้และลิงก์ทั้งหมด</li>
+      </ul>
+      <p class="small">ทดลองใช้: <strong>admin/admin123</strong> หรือ <strong>student/student123</strong></p>
+    </div>
+    <div class="hero-cta">
+      <a href="/login" class="btn btn-primary btn-lg">เริ่มใช้งาน</a>
+      <a href="/dashboard" class="btn btn-ghost">ไปยัง Dashboard</a>
+    </div>
   </div>
-</body>
-</html>
+</section>
+{% endblock %}
