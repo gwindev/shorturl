@@ -15,6 +15,8 @@ from ..core import (
     BASE_URL,
     build_short_link,
     create_access_token,
+    create_user,
+    ensure_unique_username,
     get_current_user_from_token,
     get_google_oauth_config,
     hash_password,
@@ -53,26 +55,6 @@ def get_web_user(request: Request, db):
         return None
 
 
-def _ensure_unique_username(db, username: str) -> str:
-    base = username
-    counter = 1
-    while db.scalar(select(User).where(User.username == username)):
-        username = f"{base}{counter}"
-        counter += 1
-    return username
-
-
-def _create_user(db, username: str, password: str, full_name: Optional[str] = None, is_admin: bool = False):
-    username = _ensure_unique_username(db, username)
-    user = User(
-        username=username,
-        full_name=full_name,
-        hashed_password=hash_password(password),
-        is_admin=is_admin,
-    )
-    db.add(user)
-    db.commit()
-    return user
 
 
 @router.get("/", response_class=HTMLResponse, include_in_schema=False)

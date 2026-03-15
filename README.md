@@ -49,18 +49,23 @@ GOOGLE_REDIRECT_URI=http://localhost:8000/auth/google/callback
 - Admin: `admin / admin123`
 - User: `student / student123`
 
-## API ตัวอย่าง
-ขอ access token:
+## API
+สำหรับตรวจ API ให้เปิดไปที่
 
+- Swagger UI: `https://<your-host>/api/docs`
+- OpenAPI JSON: `https://<your-host>/api/openapi.json`
+
+ตัวอย่างคำสั่ง:
+
+### ขอ access token
 ```bash
-curl -X POST http://localhost:8000/api/auth/token \
+curl -X POST https://<your-host>/api/auth/token \
   -d "username=student&password=student123"
 ```
 
-สร้าง short URL:
-
+### สร้าง short URL
 ```bash
-curl -X POST http://localhost:8000/api/shorten \
+curl -X POST https://<your-host>/api/shorten \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -H "Content-Type: application/json" \
   -d '"https://example.com"'

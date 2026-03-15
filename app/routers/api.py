@@ -20,7 +20,7 @@ from ..core import (
     make_qr_data_uri,
 )
 from ..database import get_db
-from ..models import Click, ShortURL
+from ..models import Click, ShortURL, User
 from ..schemas import ShortenRequest
 
 router = APIRouter(prefix="/api")
@@ -104,6 +104,87 @@ def my_urls_api(current_user=Depends(get_current_api_user), db: Session = Depend
         }
         for item in urls
     ]
+
+
+@router.get("/url/{url_id}")
+def get_url(url_id: int, current_user=Depends(get_current_api_user), db: Session = Depends(get_db)):
+    record = db.scalar(select(ShortURL).where(ShortURL.id == url_id))
+    if not record or record.owner_id != current_user.id:
+        raise HTTPException(status_code=404, detail="URL not found")
+
+    return {
+        "id": record.id,
+        "original_url": record.original_url,
+        "short_code": record.short_code,
+        "custom_alias": record.custom_alias,
+        "expires_at": record.expires_at.isoformat() if record.expires_at else None,
+        "created_at": record.created_at.isoformat(),
+    }
+
+
+@router.put("/url/{url_id}")
+def update_url(
+    url_id: int,
+    payload: ShortenRequest = Body(...),
+    current_user=Depends(get_current_api_user),
+    db: Session = Depends(get_db),
+):
+    record = db.scalar(select(ShortURL).where(ShortURL.id == url_id))
+    if not record or record.owner_id != current_user.id:
+        raise HTTPException(status_code=404, detail="URL not found")
+
+    record.original_url = str(payload.original_url)
+    db.commit()
+
+    return {"status": "updated", "id": record.id}
+
+
+@router.delete("/url/{url_id}")
+def delete_url(url_id: int, current_user=Depends(get_current_api_user), db: Session = Depends(get_db)):
+    record = db.scalar(select(ShortURL).where(ShortURL.id == url_id))
+    if not record or record.owner_id != current_user.id:
+        raise HTTPException(status_code=404, detail="URL not found")
+    db.delete(record)
+    db.commit()
+    return {"status": "deleted", "id": url_id}
+
+
+@router.get("/admin/users")
+def admin_list_users(current_user=Depends(get_current_api_user), db: Session = Depends(get_db)):
+    if not current_user.is_admin:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    users = db.scalars(select(User).order_by(User.id)).all()
+    return [
+        {"id": u.id, "username": u.username, "full_name": u.full_name, "is_admin": u.is_admin}
+        for u in users
+    ]
+
+
+@router.post("/admin/users")
+def admin_create_user(
+    username: str = Body(...),
+    password: str = Body(...),
+    full_name: Optional[str] = Body(None),
+    is_admin: bool = Body(False),
+    current_user=Depends(get_current_api_user),
+    db: Session = Depends(get_db),
+):
+    if not current_user.is_admin:
+        raise HTTPException(status_code=403, detail="Forbidden")
+
+    from ..core import ensure_unique_username, hash_password
+
+    username = ensure_unique_username(db, username)
+    user = User(
+        username=username,
+        full_name=full_name,
+        hashed_password=hash_password(password),
+        is_admin=is_admin,
+    )
+    db.add(user)
+    db.commit()
+    return {"id": user.id, "username": user.username}
 
 
 @router.get("/url/{url_id}/stats")

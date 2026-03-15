@@ -72,6 +72,28 @@ def authenticate_user(db: Session, username: str, password: str) -> Optional[Use
     return user
 
 
+def ensure_unique_username(db: Session, username: str) -> str:
+    base = username
+    counter = 1
+    while db.scalar(select(User).where(User.username == username)):
+        username = f"{base}{counter}"
+        counter += 1
+    return username
+
+
+def create_user(db: Session, username: str, password: str, full_name: Optional[str] = None, is_admin: bool = False) -> User:
+    username = ensure_unique_username(db, username)
+    user = User(
+        username=username,
+        full_name=full_name,
+        hashed_password=hash_password(password),
+        is_admin=is_admin,
+    )
+    db.add(user)
+    db.commit()
+    return user
+
+
 def create_short_code(db: Session, length: int = 6, alias: Optional[str] = None) -> str:
     from .models import ShortURL
 
