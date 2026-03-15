@@ -1,29 +1,33 @@
 {% extends "base.html" %}
 
-{% block title %}Login - ShortQR{% endblock %}
+{% block title %}Register - ShortQR{% endblock %}
 
 {% block content %}
 <section class="auth-layout">
   <div class="auth-copy">
-    <span class="eyebrow">Welcome back</span>
-    <h1>เข้าสู่ระบบเพื่อจัดการลิงก์และดูผลการใช้งาน</h1>
+    <span class="eyebrow">Create account</span>
+    <h1>ลงทะเบียนเพื่อเริ่มใช้งาน ShortQR</h1>
     <p class="lead">
-      หลังล็อกอินคุณจะสามารถสร้าง short URL, ดู QR Code ล่าสุด, แก้ไขหรือลบลิงก์ และติดตามสถิติการคลิกได้จากหน้า dashboard
+      ลงทะเบียนด้วยบัญชีของคุณเพื่อสร้างลิงก์สั้น ดูสถิติคลิก และจัดการลิงก์ทั้งหมดในหน้า dashboard
     </p>
   </div>
 
   <div class="card form-card auth-card">
-    <h2>Login</h2>
+    <h2>Register</h2>
     <form method="post" class="stack-form">
       <div>
         <label for="username">Username</label>
         <input id="username" name="username" required />
       </div>
       <div>
+        <label for="full_name">Full name</label>
+        <input id="full_name" name="full_name" />
+      </div>
+      <div>
         <label for="password">Password</label>
         <input id="password" name="password" type="password" required />
       </div>
-      <button type="submit" class="btn btn-primary form-submit">เข้าสู่ระบบ</button>
+      <button type="submit" class="btn btn-primary form-submit">สมัครสมาชิก</button>
       {% if error %}
         <p class="error">{{ error }}</p>
       {% endif %}
@@ -32,11 +36,11 @@
     <div class="divider">หรือ</div>
 
     <div class="auth-actions">
-      <a href="/register" class="btn btn-secondary">สมัครสมาชิก</a>
+      <a href="/login" class="btn btn-secondary">ไปยังหน้าล็อกอิน</a>
       {% if google_enabled %}
       <a href="/login/google" class="btn btn-secondary btn-google">
         <span class="icon-google" aria-hidden="true"></span>
-        Login with Google
+        Register with Google
       </a>
       {% else %}
       <span class="small" style="color: var(--muted);">Google Sign-in ยังไม่ได้ตั้งค่า</span>

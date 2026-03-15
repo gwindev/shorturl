@@ -1,25 +1,79 @@
 {% extends "base.html" %}
 
-{% block title %}Home — ShortQR{% endblock %}
+{% block title %}Home - ShortQR{% endblock %}
 
 {% block content %}
-<section class="hero">
-  <h1>ย่อ URL ให้สั้นขึ้น พร้อม QR Code</h1>
-  <p class="lead">สร้างลิงก์สั้นพร้อมสแกนด้วย QR Code ได้ทันที — เหมาะสำหรับแชร์บน Social หรืองานนำเสนอ</p>
-
-  <div class="card grid-2">
-    <div>
-      <h2>ฟีเจอร์เด่น</h2>
-      <ul>
-        <li>Login/Logout + JWT สำหรับ API</li>
-        <li>สร้าง & จัดการ Short URL พร้อม QR Code</li>
-        <li>Admin panel ดูข้อมูลผู้ใช้และลิงก์ทั้งหมด</li>
-      </ul>
-      <p class="small">ทดลองใช้: <strong>admin/admin123</strong> หรือ <strong>student/student123</strong></p>
-    </div>
-    <div class="hero-cta">
+<section class="hero-shell">
+  <div class="hero-copy">
+    <span class="eyebrow">Short link platform</span>
+    <h1>ย่อ URL ให้ดูมืออาชีพ พร้อม QR Code และสถิติการใช้งาน</h1>
+    <p class="lead">
+      โปรเจกต์นี้มีทั้งระบบล็อกอิน, dashboard จัดการลิงก์, QR สำหรับแชร์ไว และ admin panel
+      สำหรับดูภาพรวมของระบบ เหมาะกับงานเดโมหรือ mini project ที่อยากให้ดูพร้อมใช้งานจริง
+    </p>
+    <div class="hero-actions">
       <a href="/login" class="btn btn-primary btn-lg">เริ่มใช้งาน</a>
-      <a href="/dashboard" class="btn btn-ghost">ไปยัง Dashboard</a>
+      <a href="/dashboard" class="btn btn-secondary btn-lg">ดู Dashboard</a>
+    </div>
+  </div>
+
+  <div class="hero-panel card">
+    <p class="panel-label">บัญชีทดลอง</p>
+    <div class="credential">
+      <span>Admin</span>
+      <strong>admin / admin123</strong>
+    </div>
+    <div class="credential">
+      <span>Student</span>
+      <strong>student / student123</strong>
+    </div>
+    <div class="mini-note">
+      ใช้ทดสอบการสร้างลิงก์, QR Code, การแก้ไข/ลบลิงก์ และหน้า admin ได้ทันที
+    </div>
+  </div>
+</section>
+
+<section class="feature-grid">
+  <article class="card feature-card">
+    <span class="feature-number">01</span>
+    <h3>สร้างลิงก์สั้นได้เร็ว</h3>
+    <p>วาง URL เดิมแล้วสร้าง short link ได้ทันที พร้อมคัดลอกไปแชร์ต่อได้สะดวก</p>
+  </article>
+  <article class="card feature-card">
+    <span class="feature-number">02</span>
+    <h3>QR Code พร้อมใช้งาน</h3>
+    <p>ทุกลิงก์ที่เพิ่งสร้างสามารถสแกนผ่าน QR ได้ทันที เหมาะกับโปสเตอร์ งานพรีเซนต์ และเอกสาร</p>
+  </article>
+  <article class="card feature-card">
+    <span class="feature-number">03</span>
+    <h3>ติดตามการคลิก</h3>
+    <p>ดูจำนวนคลิก แยกตามอุปกรณ์ browser และระบบปฏิบัติการจากหน้าแก้ไขลิงก์</p>
+  </article>
+</section>
+
+<section class="card roadmap-card">
+  <div class="section-heading">
+    <div>
+      <p class="section-kicker">Feature ideas</p>
+      <h2>ของที่ควรเพิ่มต่อเพื่อให้โปรเจกต์ดูเด่นขึ้น</h2>
+    </div>
+  </div>
+  <div class="idea-grid">
+    <div class="idea-item">
+      <h4>Custom Alias</h4>
+      <p>ให้ผู้ใช้ตั้งชื่อท้ายลิงก์เอง เช่น `/promo2026` จะช่วยให้เดโมดูมีความเป็นผลิตภัณฑ์มากขึ้น</p>
+    </div>
+    <div class="idea-item">
+      <h4>วันหมดอายุลิงก์</h4>
+      <p>ตั้ง expiry date ได้ เหมาะกับคูปอง งานอีเวนต์ หรือการแชร์ลิงก์ชั่วคราว</p>
+    </div>
+    <div class="idea-item">
+      <h4>Copy + Download QR</h4>
+      <p>เพิ่มปุ่มคัดลอกลิงก์และดาวน์โหลด QR เป็น PNG จะทำให้ UX สมบูรณ์ขึ้นมาก</p>
+    </div>
+    <div class="idea-item">
+      <h4>Top Links Dashboard</h4>
+      <p>จัดอันดับลิงก์ที่คลิกเยอะที่สุดในช่วง 7 วันล่าสุด เพื่อให้หน้า dashboard มี value มากกว่าแค่ตาราง</p>
     </div>
   </div>
 </section>

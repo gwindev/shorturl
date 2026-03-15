@@ -1,36 +1,127 @@
 {% extends "base.html" %}
 
-{% block title %}Admin — ShortQR{% endblock %}
+{% block title %}Admin - ShortQR{% endblock %}
 
 {% block content %}
 <section class="page-header">
-  <h2>Admin Panel</h2>
-  <p class="lead">ดูข้อมูลผู้ใช้และลิงก์ทั้งหมดของระบบ</p>
+  <span class="eyebrow">Control center</span>
+  <h1>Admin Panel</h1>
+  <p class="lead">ดูข้อมูลผู้ใช้และภาพรวมลิงก์ทั้งหมดของระบบในหน้าเดียว</p>
+</section>
+
+<section class="metric-grid">
+  <article class="card metric-card">
+    <p class="metric-label">Users</p>
+    <p class="metric-value">{{ users|length }}</p>
+    <p class="small">จำนวนผู้ใช้ทั้งหมดในระบบ</p>
+  </article>
+  <article class="card metric-card">
+    <p class="metric-label">Links</p>
+    <p class="metric-value">{{ urls|length }}</p>
+    <p class="small">จำนวน short links ที่ถูกสร้างทั้งหมด</p>
+  </article>
+  <article class="card metric-card">
+    <p class="metric-label">Clicks</p>
+    <p class="metric-value">{{ total_clicks }}</p>
+    <p class="small">ยอดคลิกสะสมจากทุกลิงก์ในระบบ</p>
+  </article>
 </section>
 
 <section class="card">
-  <h3>Users</h3>
+  <div class="section-heading">
+    <div>
+      <p class="section-kicker">Users</p>
+      <h2>บัญชีผู้ใช้ทั้งหมด</h2>
+    </div>
+  </div>
   <div class="table-wrap">
     <table>
-      <thead><tr><th>ID</th><th>Username</th><th>Name</th><th>Admin</th></tr></thead>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Username</th>
+          <th>Name</th>
+          <th>Role</th>
+        </tr>
+      </thead>
       <tbody>
-      {% for u in users %}
-      <tr><td>{{ u.id }}</td><td>{{ u.username }}</td><td>{{ u.full_name }}</td><td>{{ u.is_admin }}</td></tr>
-      {% endfor %}
+        {% for u in users %}
+        <tr>
+          <td>{{ u.id }}</td>
+          <td>{{ u.username }}</td>
+          <td>{{ u.full_name or '-' }}</td>
+          <td>
+            <span class="badge {{ 'badge-admin' if u.is_admin else 'badge-user' }}">
+              {{ 'Admin' if u.is_admin else 'Member' }}
+            </span>
+          </td>
+        </tr>
+        {% endfor %}
       </tbody>
     </table>
   </div>
 </section>
 
 <section class="card">
-  <h3>All Short URLs</h3>
+  <div class="section-heading">
+    <div>
+      <p class="section-kicker">Add User</p>
+      <h2>สร้างบัญชีใหม่</h2>
+    </div>
+  </div>
+
+  <form method="post" action="/admin/users/create" class="stack-form">
+    <div>
+      <label for="username">Username</label>
+      <input id="username" name="username" required />
+    </div>
+    <div>
+      <label for="full_name">Full name</label>
+      <input id="full_name" name="full_name" />
+    </div>
+    <div>
+      <label for="password">Password</label>
+      <input id="password" name="password" type="password" required />
+    </div>
+    <div>
+      <label>
+        <input type="checkbox" name="is_admin" value="1" /> Grant admin
+      </label>
+    </div>
+    <button type="submit" class="btn btn-primary">Create user</button>
+  </form>
+</section>
+
+<section class="card">
+  <div class="section-heading">
+    <div>
+      <p class="section-kicker">Short URLs</p>
+      <h2>ลิงก์ทั้งหมดในระบบ</h2>
+    </div>
+  </div>
   <div class="table-wrap">
     <table>
-      <thead><tr><th>ID</th><th>Code</th><th>Original URL</th><th>Owner ID</th><th>Created</th></tr></thead>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Code</th>
+          <th>Original URL</th>
+          <th>Owner ID</th>
+          <th>Clicks</th>
+          <th>Created</th>
+        </tr>
+      </thead>
       <tbody>
-      {% for item in urls %}
-      <tr><td>{{ item.id }}</td><td>{{ item.short_code }}</td><td class="break">{{ item.original_url }}</td><td>{{ item.owner_id }}</td><td>{{ item.created_at }}</td></tr>
-      {% endfor %}
+        {% for item in urls %}
+        <tr>
+          <td>{{ item.id }}</td>
+          <td><span class="code-chip">{{ item.short_code }}</span></td>
+          <td class="break">{{ item.original_url }}</td>
+          <td>{{ item.owner_id }}</td>
+          <td>{{ item.clicks|length }}</td>
+          <td>{{ item.created_at }}</td>
+        </tr>
+        {% endfor %}
       </tbody>
     </table>
   </div>

@@ -1,48 +1,123 @@
 {% extends "base.html" %}
 
-{% block title %}Dashboard — ShortQR{% endblock %}
+{% block title %}Dashboard - ShortQR{% endblock %}
 
 {% block content %}
 <section class="page-header">
-  <h2>สวัสดี {{ user.full_name or user.username }}</h2>
-  <p class="lead">สร้างลิงก์สั้นและแชร์ได้ทันที พร้อม QR Code สำหรับสแกน</p>
+  <span class="eyebrow">Workspace</span>
+  <h1>สวัสดี {{ user.full_name or user.username }}</h1>
+  <p class="lead">สร้างลิงก์สั้นใหม่ ดู QR ล่าสุด และจัดการลิงก์ทั้งหมดของคุณจากหน้านี้</p>
 </section>
 
-<section class="card">
-  <form method="post" action="/dashboard/shorten" class="form-inline">
-    <label class="sr-only" for="original_url">URL ต้นทาง</label>
-    <input id="original_url" name="original_url" type="url" placeholder="https://example.com/very/long/url" required />
-    <button type="submit" class="btn btn-primary">ย่อ URL</button>
-  </form>
+<section class="metric-grid">
+  <article class="card metric-card">
+    <p class="metric-label">My Links</p>
+    <p class="metric-value">{{ urls|length }}</p>
+    <p class="small">ลิงก์ทั้งหมดที่คุณสร้างไว้</p>
+  </article>
+  <article class="card metric-card">
+    <p class="metric-label">Total Clicks</p>
+    <p class="metric-value">{{ total_clicks }}</p>
+    <p class="small">จำนวนคลิกสะสมจากทุกลิงก์</p>
+  </article>
+  <article class="card metric-card">
+    <p class="metric-label">Latest Result</p>
+    <p class="metric-value">{{ 'พร้อมแล้ว' if qr else 'ยังไม่มี' }}</p>
+    <p class="small">QR Code ของลิงก์ล่าสุดจะแสดงด้านล่างหลังสร้างสำเร็จ</p>
+  </article>
 </section>
 
-{% if qr %}
-<section class="card">
-  <h3>ลิงก์ล่าสุด</h3>
-  <p><a href="{{ latest_short_link }}" target="_blank">{{ latest_short_link }}</a></p>
-  <div class="qr">
-    <img src="{{ qr }}" alt="QR Code" />
+<section class="dashboard-grid">
+  <div class="card">
+    <div class="section-heading">
+      <div>
+        <p class="section-kicker">Create</p>
+        <h2>สร้าง Short URL ใหม่</h2>
+      </div>
+    </div>
+    <form method="post" action="/dashboard/shorten" class="stack-form">
+      <div>
+        <label for="original_url">URL ต้นทาง</label>
+        <input id="original_url" name="original_url" type="url" placeholder="https://example.com/very/long/url" required />
+      </div>
+      <div>
+        <label for="alias">Custom Alias</label>
+        <input id="alias" name="alias" type="text" placeholder="promo2026" />
+        <p class="small">ไม่ใส่ระบบจะสร้างรหัสให้อัตโนมัติ</p>
+      </div>
+      <div>
+        <label for="expires_at">วันหมดอายุ (Optional)</label>
+        <input id="expires_at" name="expires_at" type="date" />
+        <p class="small">ถ้าตั้ง ระบบจะปิดการใช้งานหลังถึงวันนั้น</p>
+      </div>
+      <button type="submit" class="btn btn-primary">ย่อ URL</button>
+    </form>
+  </div>
+
+  <div class="card latest-card">
+    <div class="section-heading">
+      <div>
+        <p class="section-kicker">Latest</p>
+        <h2>ลิงก์ล่าสุด</h2>
+      </div>
+    </div>
+    {% if qr %}
+      <p class="small">ลิงก์ที่เพิ่งสร้าง</p>
+      <p class="latest-link"><a href="{{ latest_short_link }}" target="_blank">{{ latest_short_link }}</a></p>
+      <div class="qr">
+        <img src="{{ qr }}" alt="QR Code" />
+      </div>
+      <div class="qr-actions">
+        <a href="{{ qr }}" download="shorturl.png" class="btn btn-secondary">Download QR</a>
+      </div>
+    {% else %}
+      <p class="empty-state">ยังไม่มี QR Code ล่าสุด ลองสร้างลิงก์ใหม่ทางด้านซ้ายได้เลย</p>
+    {% endif %}
   </div>
 </section>
-{% endif %}
 
 <section class="card">
-  <h3>ลิงก์ของฉัน</h3>
+  <div class="section-heading">
+    <div>
+      <p class="section-kicker">Manage</p>
+      <h2>ลิงก์ของฉัน</h2>
+    </div>
+  </div>
   <div class="table-wrap">
     <table>
-      <thead><tr><th>ID</th><th>Original URL</th><th>Short URL</th><th>Clicks</th><th>Created</th><th>Actions</th></tr></thead>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Original URL</th>
+          <th>Short URL</th>
+          <th>Clicks</th>
+          <th>Created</th>
+          <th>Expires</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
       <tbody>
         {% for item in urls %}
-        <tr>
+        <tr data-short-url="{{ base_url }}/{{ item.custom_alias or item.short_code }}">
           <td>{{ item.id }}</td>
           <td class="break">{{ item.original_url }}</td>
-          <td class="break"><a href="{{ base_url }}/{{ item.short_code }}" target="_blank">{{ base_url }}/{{ item.short_code }}</a></td>
+          <td class="break short-url-cell">
+            <div class="short-url">
+              <a href="{{ base_url }}/{{ item.custom_alias or item.short_code }}" target="_blank" class="short-url-link">
+                {{ base_url }}/<span class="short-code">{{ item.custom_alias or item.short_code }}</span>
+              </a>
+              <button type="button" class="btn btn-ghost btn-copy" data-clipboard-text="{{ base_url }}/{{ item.custom_alias or item.short_code }}" title="Copy link">
+                Copy
+              </button>
+            </div>
+          </td>
           <td>{{ item.clicks|length }}</td>
           <td>{{ item.created_at }}</td>
+          <td>{{ item.expires_at.strftime('%Y-%m-%d') if item.expires_at else '-' }}</td>
           <td class="actions">
-            <a href="/dashboard/url/{{ item.id }}/edit" class="btn btn-ghost">Edit</a>
-            <form method="post" action="/dashboard/url/{{ item.id }}/delete" onsubmit="return confirm('ยืนยันการลบลิงก์นี้?');" style="display:inline;">
-              <button type="submit" class="btn btn-ghost">Delete</button>
+            <a href="/dashboard/url/{{ item.id }}/edit" class="btn btn-secondary">Edit</a>
+            <form method="post" action="/dashboard/url/{{ item.id }}/delete" onsubmit="return confirm('ยืนยันการลบลิงก์นี้?');">
+              <button type="submit" class="btn btn-danger">Delete</button>
             </form>
           </td>
         </tr>
@@ -52,76 +127,159 @@
   </div>
 </section>
 
+{% if top_links %}
+<section class="card">
+  <div class="section-heading">
+    <div>
+      <p class="section-kicker">Top Links</p>
+      <h2>Top 5 ลิงก์ (7 วันล่าสุด)</h2>
+    </div>
+  </div>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Short URL</th>
+          <th>Original URL</th>
+          <th>Clicks</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for link in top_links %}
+        <tr>
+          <td>{{ link.id }}</td>
+          <td class="break">
+            <a href="{{ base_url }}/{{ link.custom_alias or link.short_code }}" target="_blank">
+              {{ base_url }}/<span class="short-code">{{ link.custom_alias or link.short_code }}</span>
+            </a>
+          </td>
+          <td class="break">{{ link.original_url }}</td>
+          <td>{{ link.clicks }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+
 {% if edit_url %}
 <section class="card">
-  <h3>แก้ไขลิงก์</h3>
-  <form method="post" action="/dashboard/url/{{ edit_url.id }}/edit" class="form-inline">
-    <label class="sr-only" for="original_url_edit">Original URL</label>
-    <input id="original_url_edit" name="original_url" type="url" value="{{ edit_url.original_url }}" required />
-    <button type="submit" class="btn btn-primary">บันทึก</button>
-    <a href="/dashboard" class="btn btn-ghost">ยกเลิก</a>
+  <div class="section-heading">
+    <div>
+      <p class="section-kicker">Edit</p>
+      <h2>แก้ไขลิงก์ #{{ edit_url.id }}</h2>
+    </div>
+  </div>
+  <form method="post" action="/dashboard/url/{{ edit_url.id }}/edit" class="stack-form">
+    <div>
+      <label for="original_url_edit">Original URL</label>
+      <input id="original_url_edit" name="original_url" type="url" value="{{ edit_url.original_url }}" required />
+    </div>
+    <div class="actions">
+      <button type="submit" class="btn btn-primary">บันทึก</button>
+      <a href="/dashboard" class="btn btn-secondary">ยกเลิก</a>
+    </div>
   </form>
 
   <div class="stats">
-    <div class="stats-row">
-      <div>
-        <h4>คลิกทั้งหมด</h4>
-        <p id="total-clicks" class="stat-number">–</p>
+    <div class="stats-top">
+      <div class="mini-stat">
+        <span>คลิกทั้งหมด</span>
+        <strong id="total-clicks">-</strong>
       </div>
-      <div>
-        <h4>กรอง</h4>
-        <form id="stats-filter" class="stats-filter">
-          <label>
-            IP
-            <input name="ip" placeholder="ใส่ IP" />
-          </label>
-          <label>
-            ประเทศ
-            <input name="country" placeholder="ตัวอย่าง TH" />
-          </label>
-          <label>
-            จาก
-            <input name="start_date" type="date" />
-          </label>
-          <label>
-            ถึง
-            <input name="end_date" type="date" />
-          </label>
-          <button type="submit" class="btn btn-primary">กรอง</button>
-        </form>
+      <div class="mini-stat">
+        <span>Export</span>
+        <button id="export-csv" class="btn btn-secondary">ดาวน์โหลด CSV</button>
       </div>
     </div>
 
-    <div class="chart-card">
-      <canvas id="clickChart" width="400" height="180"></canvas>
+    <form id="stats-filter" class="stats-filter">
+      <label>
+        IP
+        <input name="ip" placeholder="ค้นหาตาม IP" />
+      </label>
+      <label>
+        ประเทศ
+        <input name="country" placeholder="เช่น TH" />
+      </label>
+      <label>
+        จากวันที่
+        <input name="start_date" type="date" />
+      </label>
+      <label>
+        ถึงวันที่
+        <input name="end_date" type="date" />
+      </label>
+      <label>
+        Group by
+        <select name="group_by">
+          <option value="day" selected>วัน</option>
+          <option value="month">เดือน</option>
+        </select>
+      </label>
+      <button type="submit" class="btn btn-primary">อัปเดตสถิติ</button>
+    </form>
+
+    <div class="chart-grid">
+      <div class="chart-card">
+        <h3>Clicks Overview</h3>
+        <canvas id="clickChart" width="400" height="180"></canvas>
+      </div>
+      <div class="chart-card">
+        <h3>Browser</h3>
+        <canvas id="browserChart" width="400" height="180"></canvas>
+      </div>
+      <div class="chart-card">
+        <h3>OS</h3>
+        <canvas id="osChart" width="400" height="180"></canvas>
+      </div>
     </div>
   </div>
 </section>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-  const ctx = document.getElementById('clickChart');
+  const clickCtx = document.getElementById("clickChart");
+  const browserCtx = document.getElementById("browserChart");
+  const osCtx = document.getElementById("osChart");
+  const filterForm = document.getElementById("stats-filter");
+  const exportButton = document.getElementById("export-csv");
+  const totalClicks = document.getElementById("total-clicks");
+  const statsUrl = "/api/url/{{ edit_url.id }}/stats";
+  const exportUrl = "/api/url/{{ edit_url.id }}/export";
   let clickChart;
+  let browserChart;
+  let osChart;
 
-  function renderChart(data) {
-    const config = {
-      type: 'line',
+  function destroyCharts() {
+    if (clickChart) clickChart.destroy();
+    if (browserChart) browserChart.destroy();
+    if (osChart) osChart.destroy();
+  }
+
+  function buildLineChart(ctx, data) {
+    return new Chart(ctx, {
+      type: "line",
       data: {
         labels: data.labels,
         datasets: [
           {
-            label: 'Mobile',
+            label: "Mobile",
             data: data.mobile,
-            borderColor: 'rgba(79, 70, 229, 0.85)',
-            backgroundColor: 'rgba(79, 70, 229, 0.2)',
-            tension: 0.3,
+            borderColor: "#ff8a65",
+            backgroundColor: "rgba(255, 138, 101, 0.18)",
+            tension: 0.35,
+            fill: true,
           },
           {
-            label: 'Desktop',
+            label: "Desktop",
             data: data.desktop,
-            borderColor: 'rgba(37, 99, 235, 0.85)',
-            backgroundColor: 'rgba(37, 99, 235, 0.2)',
-            tension: 0.3,
+            borderColor: "#4fd1c5",
+            backgroundColor: "rgba(79, 209, 197, 0.18)",
+            tension: 0.35,
+            fill: true,
           },
         ],
       },
@@ -129,60 +287,137 @@
         responsive: true,
         plugins: {
           legend: {
-            position: 'top',
-            labels: { color: '#eef2ff' },
+            labels: {
+              color: "#f4efe6",
+            },
           },
         },
         scales: {
           x: {
-            ticks: { color: '#cbd5e1' },
-            grid: { color: 'rgba(255,255,255,0.08)' },
+            ticks: { color: "#d6ceb8" },
+            grid: { color: "rgba(255,255,255,0.08)" },
           },
           y: {
             beginAtZero: true,
-            ticks: { color: '#cbd5e1' },
-            grid: { color: 'rgba(255,255,255,0.08)' },
+            ticks: { color: "#d6ceb8" },
+            grid: { color: "rgba(255,255,255,0.08)" },
           },
         },
       },
-    };
-
-    if (clickChart) {
-      clickChart.data = config.data;
-      clickChart.options = config.options;
-      clickChart.update();
-    } else {
-      clickChart = new Chart(ctx, config);
-    }
-  }
-
-  async function loadStats(params = {}) {
-    const url = new URL(window.location.origin + '/dashboard/url/{{ edit_url.id }}/stats');
-    Object.keys(params).forEach((key) => {
-      if (params[key]) url.searchParams.append(key, params[key]);
     });
-
-    const res = await fetch(url);
-    if (!res.ok) return;
-
-    const data = await res.json();
-    document.getElementById('total-clicks').textContent = data.total_clicks;
-    renderChart(data);
   }
 
-  document.getElementById('stats-filter').addEventListener('submit', (event) => {
+  function buildBarChart(ctx, labels, values, label, color) {
+    return new Chart(ctx, {
+      type: "bar",
+      data: {
+        labels,
+        datasets: [
+          {
+            label,
+            data: values,
+            backgroundColor: color,
+            borderRadius: 10,
+          },
+        ],
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: {
+            labels: {
+              color: "#f4efe6",
+            },
+          },
+        },
+        scales: {
+          x: {
+            ticks: { color: "#d6ceb8" },
+            grid: { display: false },
+          },
+          y: {
+            beginAtZero: true,
+            ticks: { color: "#d6ceb8" },
+            grid: { color: "rgba(255,255,255,0.08)" },
+          },
+        },
+      },
+    });
+  }
+
+  function buildQueryString() {
+    const params = new URLSearchParams(new FormData(filterForm));
+    return params.toString();
+  }
+
+  async function loadStats() {
+    const response = await fetch(`${statsUrl}?${buildQueryString()}`);
+    const data = await response.json();
+
+    totalClicks.textContent = data.total_clicks;
+    destroyCharts();
+    clickChart = buildLineChart(clickCtx, data);
+    browserChart = buildBarChart(
+      browserCtx,
+      Object.keys(data.browsers),
+      Object.values(data.browsers),
+      "Browser",
+      "#ff8a65"
+    );
+    osChart = buildBarChart(
+      osCtx,
+      Object.keys(data.oses),
+      Object.values(data.oses),
+      "OS",
+      "#4fd1c5"
+    );
+  }
+
+  filterForm.addEventListener("submit", function (event) {
     event.preventDefault();
-    const form = event.target;
-    const params = {
-      ip: form.ip.value.trim(),
-      country: form.country.value.trim(),
-      start_date: form.start_date.value,
-      end_date: form.end_date.value,
-    };
-    loadStats(params);
+    loadStats();
+  });
+
+  exportButton.addEventListener("click", function () {
+    window.location.href = `${exportUrl}?${buildQueryString()}`;
   });
 
   loadStats();
+
+  // Copy-to-clipboard helper
+  const toast = document.createElement('div');
+  toast.className = 'toast';
+  document.body.appendChild(toast);
+
+  function showToast(message) {
+    toast.textContent = message;
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 2000);
+  }
+
+  document.querySelectorAll('.btn-copy').forEach((button) => {
+    button.addEventListener('click', () => {
+      const text = button.getAttribute('data-clipboard-text');
+      if (!text) return;
+      navigator.clipboard.writeText(text).then(
+        () => showToast('Copied!'),
+        () => showToast('Copy failed')
+      );
+    });
+  });
+
+  document.querySelectorAll('tr[data-short-url]').forEach((row) => {
+    row.addEventListener('click', (event) => {
+      const isButton = event.target.closest('button, a');
+      if (isButton) return;
+      const shortUrl = row.getAttribute('data-short-url');
+      if (!shortUrl) return;
+      navigator.clipboard.writeText(shortUrl).then(
+        () => showToast('Copied!'),
+        () => showToast('Copy failed')
+      );
+    });
+  });
 </script>
 {% endif %}
 {% endblock %}
