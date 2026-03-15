@@ -17,6 +17,8 @@
 - Jinja2 Templates
 - JWT (`python-jose`)
 - QR Code (`qrcode`)
+- OAuth Google Login (`httpx`)
+- `.env` config (`python-dotenv`)
 
 ## เริ่มต้นใช้งาน
 ```bash
@@ -27,6 +29,21 @@ uvicorn app.main:app --reload
 ```
 
 เปิดใช้งานที่ `http://localhost:8000`
+
+## ตั้งค่า (Environment variables)
+สร้างไฟล์ `.env` (ใน root โปรเจกต์) แล้วใส่ค่า:
+
+```env
+SHORTQR_BASE_URL=http://localhost:8000
+SHORTQR_SECRET_KEY=replace-with-a-random-secret
+
+# Google OAuth (ถ้าต้องการเปิด Google login)
+GOOGLE_CLIENT_ID=your-google-client-id
+GOOGLE_CLIENT_SECRET=your-google-client-secret
+GOOGLE_REDIRECT_URI=http://localhost:8000/auth/google/callback
+```
+
+> หมายเหตุ: ถ้าไม่ต้องการใช้ Google login ให้ปล่อยสองค่าสุดท้ายไว้ หรือไม่ต้องใส่ได้ แต่ระบบจะไม่เปิดปุ่ม Google login
 
 ## บัญชีทดลอง
 - Admin: `admin / admin123`
