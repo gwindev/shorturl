@@ -101,11 +101,6 @@ def login(
     return response
 
 
-@router.get("/register", response_class=HTMLResponse, include_in_schema=False)
-def register_page(request: Request):
-    return templates.TemplateResponse("register.html", {"request": request, "error": None, "user": None})
-
-
 @router.post("/register", response_class=HTMLResponse, include_in_schema=False)
 def register(
     request: Request,
@@ -127,7 +122,7 @@ def register(
             {"request": request, "error": "ชื่อผู้ใช้นี้ถูกใช้งานแล้ว", "user": None},
         )
 
-    _create_user(db, username, password, full_name)
+    create_user(db, username, password, full_name)
 
     return RedirectResponse(url="/login", status_code=status.HTTP_303_SEE_OTHER)
 
@@ -202,7 +197,7 @@ def google_callback(request: Request, code: Optional[str] = None, db=Depends(get
     user = db.scalar(select(User).where(User.username == email))
     if not user:
         # create new user with email as username
-        user = _create_user(db, email, secrets.token_urlsafe(16), full_name=name)
+        user = create_user(db, email, secrets.token_urlsafe(16), full_name=name)
 
     token = create_access_token({"sub": user.username}, timedelta(minutes=60))
     response = RedirectResponse(url="/dashboard", status_code=status.HTTP_303_SEE_OTHER)
@@ -402,7 +397,7 @@ def admin_create_user(
     if not user.is_admin:
         return HTMLResponse("<h3>403 Forbidden</h3>", status_code=403)
 
-    _create_user(db, username, password, full_name, is_admin=bool(is_admin))
+    create_user(db, username, password, full_name, is_admin=bool(is_admin))
     return RedirectResponse("/admin", status_code=status.HTTP_303_SEE_OTHER)
 
 
