@@ -5,9 +5,13 @@
 ## ฟีเจอร์ปัจจุบัน
 - Login / Logout สำหรับผู้ใช้
 - สร้าง Short URL พร้อม QR Code
+- ใส่ **Custom Alias** (เช่น `/promo2026`) ได้เอง
+- ตั้ง **วันหมดอายุลิงก์** เพื่อให้ใช้งานเฉพาะช่วงเวลาที่กำหนด
+- copy short link (คลิกเดียว) + **ดาวน์โหลด QR เป็น PNG** ได้ทันที
+- แสดง **Top Links** (5 อันดับ) จาก 7 วันล่าสุด
 - แก้ไขและลบลิงก์จากหน้า Dashboard
 - ติดตามจำนวนคลิกของแต่ละลิงก์
-- ดูสถิติ click analytics ผ่านกราฟ
+- ดูสถิติ click analytics ผ่านกราฟ (browser/OS/desktop vs mobile)
 - Admin panel สำหรับดูผู้ใช้และลิงก์ทั้งหมด
 - JWT API สำหรับเชื่อมต่อกับแอปอื่น
 
@@ -63,10 +67,18 @@ curl -X POST https://<your-host>/api/auth/token \
   -d "username=student&password=student123"
 ```
 
-### สร้าง short URL
+### สร้าง short URL (แบบพื้นฐาน)
 ```bash
 curl -X POST https://<your-host>/api/shorten \
   -H "Authorization: Bearer YOUR_TOKEN" \
   -H "Content-Type: application/json" \
   -d '"https://example.com"'
+```
+
+### สร้าง short URL พร้อม Custom Alias / Expiry (JSON)
+```bash
+curl -X POST https://<your-host>/api/shorten-json \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"original_url": "https://example.com","custom_alias": "promo2026","expires_at": "2026-12-31T23:59:59"}'
 ```

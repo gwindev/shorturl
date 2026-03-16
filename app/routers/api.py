@@ -13,6 +13,7 @@ from ..core import (
     BASE_URL,
     build_short_link,
     create_access_token,
+    create_short_code,
     detect_browser,
     detect_device_type,
     detect_os,
@@ -76,8 +77,18 @@ def shorten_api_json(
     current_user=Depends(get_current_api_user),
     db: Session = Depends(get_db),
 ):
-    code = secrets.token_urlsafe(6)[:6]
-    new_url = ShortURL(original_url=str(payload.original_url), short_code=code, owner_id=current_user.id)
+    try:
+        code = create_short_code(db, alias=payload.custom_alias)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    new_url = ShortURL(
+        original_url=str(payload.original_url),
+        short_code=code,
+        custom_alias=payload.custom_alias,
+        expires_at=payload.expires_at,
+        owner_id=current_user.id,
+    )
     db.add(new_url)
     db.commit()
     short_link = build_short_link(code)
